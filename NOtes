@@ -1,0 +1,330 @@
+    //should be able to have an attribute here to change the command name
+    public abstract class BaseAction
+    {
+        //could be cool to pump out an alias list for cli use to not have to type in full program name and action and just bypass to action
+        //so alias a.exe addtag -> addtag
+
+        //This could be done in a pre made action
+        //we could have various premade actions for helping things
+        //Add an attribute for description
+        public BaseAction() {}
+        public abstract string CommandName(); // this should be removed and replaced with the class name or the attrib name
+        public abstract bool IsCommand(string s); //is command will just checkk the command name and not have to be implemented
+        public abstract string HelpString();
+        public Task<StatusCode> Run(IEnumerable<String> args, SpotliteContext _spotliteContext)
+        {
+            ParseArgs(args);
+            return RunInternal(_spotliteContext);
+        }
+        public int ParseArgs(IEnumerable<string> args)
+        {
+            var properties = this.GetProperties();
+            var tokens = args.Tokenize().ToArray();
+            var i = 0;
+            while(i < tokens.Count())
+            {
+                if(!(tokens[i].IsFlag && properties.ContainsKey(tokens[i].Value ?? string.Empty)))
+                {
+                    Console.WriteLine($"Unrecognized token {tokens[i].Value}");
+                    return -1;
+                }
+                var prop = properties[tokens[i].Value ?? string.Empty];
+                i++;
+                /*
+                    There has to be a way to do complex 
+                    object arrays in this format 
+
+                    the string switch sucks would be cool 
+                    if there was another way to go about this.
+
+                    im thinking in the default if its a collection based on substring
+                    see if collection is in that or if its an array
+
+                    have a dict with string to func to do the to list part
+
+                */ 
+                switch (prop.PropertyType.ToString())
+                {
+                    case "System.String":
+                        prop.SetValue(this,tokens[i].Value);
+                        break;
+                    case "System.Int32":
+                        prop.SetValue(this,int.Parse(tokens[i].Value ?? ""));
+                        break;
+                    case "System.Double":
+                        prop.SetValue(this,double.Parse(tokens[i].Value ?? ""));
+                        break;
+                    case "System.Single":
+                        prop.SetValue(this,float.Parse(tokens[i].Value ?? ""));
+                        break;
+                    case "System.Decimal":
+                        prop.SetValue(this,decimal.Parse(tokens[i].Value ?? ""));
+                        break;
+                    case "System.Collections.Generic.List`1[System.Object]":
+                        var list = new List<Object>();
+                        while(!tokens[i+1].IsFlag)
+                        {
+                            list.Add(tokens[i].Value!);
+                            i++;
+                        }
+                        list.Add(tokens[i].Value!);
+                        prop.SetValue(this,list);
+                        break;
+                    case "System.Collections.Generic.IEnumerable`1[System.Object]":
+                        var list2 = new List<Object>();
+                        while(!tokens[i+1].IsFlag)
+                        {
+                            list2.Add(tokens[i].Value!);
+                            i++;
+                        }
+                        list2.Add(tokens[i].Value!);
+                        prop.SetValue(this,list2.AsEnumerable());
+                        break;
+                    case "System.Object[]":
+                        var list3 = new List<Object>();
+                        while(!tokens[i+1].IsFlag)
+                        {
+                            list3.Add(tokens[i].Value!);
+                            i++;
+                        }
+                        list3.Add(tokens[i].Value!);
+                        prop.SetValue(this,list3.ToArray());
+                        break;
+                    case "System.DateTime":
+                        prop.SetValue(this,DateTime.Parse(tokens[i].Value ?? ""));
+                        break;
+                    case "System.Boolean":
+                        prop.SetValue(this,true);
+                        i--;
+                        break;
+                }
+                i++;
+            }
+            /*
+                run a check that 
+                * all mandatory have a value or list none
+                * at least one either or list none 
+            */
+            return 0;
+        }
+        protected abstract Task<StatusCode> RunInternal(SpotliteContext _spotliteContext);
+        protected Task<StatusCode> Success => Task.FromResult(StatusCode.None);
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+namespace SpotClient
+{
+    public class Argument
+    {
+        public List<Item> Items { get; set; }
+        public Argument(params Item[] items) 
+        {
+            Items = items.ToList();
+        }
+        public bool Validate(BaseAction action)
+        {
+            foreach(var item in Items)
+            {
+                var param = action.GetProperty(item.ParameterName);
+                if(param == null) return false;
+            }
+            return true;
+        }
+        public Argument Push(Item i)
+        {
+            Items.Add(i);
+            return this;
+        }
+    }
+    public class Item
+    {
+        public string ParameterName { get; set; }
+        public IEnumerable<string> Flags { get; set; }
+
+        //MinValue is unlimited flags. until the next flag is presented
+        //if another token is passed when the flag is not expecting it
+        //we will throw an error 
+
+        //1 is default 
+
+        //0 will still need to be used for conditional flags think ls -l where you are 
+        //not passing anything in. I think in the case here 1 will be the most common
+        public int Count { get; set; }
+        public Item(string parameterName, int count, params string[] flags)
+        {
+            ParameterName = parameterName;
+            Flags = flags;
+            Count = count;
+        }
+        public Item(string parameterName, params string[] flags)
+        {
+            ParameterName = parameterName;
+            Flags = flags;
+            Count = 1;
+        }
+    }
+    public class Token 
+    {
+        public string? Value { get; set; }
+        public TokenType Type { get; set;}
+        public bool IsFlag => Type == TokenType.Flag;
+    }
+    public enum TokenType
+    {
+        Value, Flag
+    }
+    public static class ItemExtensions
+    {
+        private static int NO_LIMIT => int.MinValue;
+        public static Item WithManyInputs(this string parameterName, params string[] flags) => new Item(parameterName, NO_LIMIT, flags);
+        public static Item WithOneInputs(this string parameterName, params string[] flags) => new Item(parameterName, flags);
+        public static Item WithNoInputs(this string parameterName, params string[] flags) => new Item(parameterName, 0, flags);
+        /*
+        The use case for this would be 
+        ```
+            Arguments.Push(nameof(FileName).WithOneInput("-f","--file"))
+        ``` 
+        This should be more declarative than having the number 
+        could also break into builder pattern but for now this is good.
+        */
+    }
+    public static class ParsingExtensions
+    {
+        public static Dictionary<string,PropertyInfo> GetProperties(this BaseAction action)  =>
+            action.GetType()
+                .GetProperties()
+                .Where(x => x.GetCustomAttributes(false)
+                    .Where(y => y.GetType().IsAssignableTo(typeof(FlagAttribute)))
+                    .Any()
+                )
+                .Select(x => (
+                    ((FlagAttribute) x.GetCustomAttributes(false)
+                        .Where(y => y.GetType().IsAssignableTo(typeof(FlagAttribute)))
+                    .FirstOrDefault()!)
+                    .Flags, x))
+                .Select(x => x.Flags.Select(f => (f,x.x)))
+                .SelectMany(x => x)
+                .ToDictionary(x => x.f,x => x.x);
+        public static PropertyInfo? GetProperty(this BaseAction action, string name) =>
+            action.GetType()
+                .GetProperties()
+                .Where(x => x.Name == name)
+                .FirstOrDefault();
+
+        public static IEnumerable<Token> Tokenize(this IEnumerable<string> args) => args.Select(x => 
+            new Token {
+                Value = x.Clean(),
+                Type = x.StartsWith("-") ? TokenType.Flag : TokenType.Value,
+            });
+        public static string Clean(this string s)
+        {
+            if(s.StartsWith('"') && s.EndsWith('"'))
+                return s[1..(s.Length-1)];
+            return s;
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   public abstract class FlagAttribute : System.Attribute 
+    {
+        public string[] Flags { get; }
+        public FlagAttribute(params string[] flags) { Flags = flags; }
+    }
+
+    public class Manditory : FlagAttribute
+    { 
+        public Manditory(params string[] flags) : base(flags) {}
+    }
+
+    public class Either : FlagAttribute
+    {   //Should be able to accept a key or string or something so you can have multiple eithers. 
+        public Either(params string[] flags) : base(flags) {}
+        //like this then I guess it could be passed to flag attribute or just in this one, 
+        //would be more versitile to go to the main wouldnt have to specify for this would just be able
+        //to have one for each
+        //mandatory could be like a guid for each creation
+        //and not required could just be an empty string.
+        //With this tho error messages wouldnt be able to be as percise so..
+        public Either(string id, params string[] flags) : base(flags) {}
+    }
+    public class NotRequired : FlagAttribute
+    { 
+        public NotRequired(params string[] flags) : base(flags) {}
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+var actions = AppDomain
+    .CurrentDomain
+    .GetAssemblies()
+    .SelectMany(x => x.DefinedTypes)
+    .Where(p => p.BaseType == typeof(BaseAction))
+    .Select(x => (BaseAction) Activator.CreateInstance(x)!)
+    .ToList();
+
+var status = StatusCode.None;
+
+var dbOptions = new DbContextOptionsBuilder<SpotliteContext>()
+    .UseSqlServer(ConfigurationManager.AppSettings["ConnectionString"] ?? string.Empty)
+    .Options;
+
+using var _spotliteContext = new SpotliteContext(dbOptions);
+var status__ = await (actions!
+        .Where(x => x.IsCommand("addtag"))
+        .FirstOrDefault() ?? Default.Singleton)
+        .Run(new string[]{"-f","file", "-n", "45", "-b" , "-l","fo","fum","sdf" ,"-d", "1/1/2022"}, _spotliteContext);
+
+while (status == 0)
+{
+    Console.Write(">>> ");
+
+    var input = (Console.ReadLine() ?? string.Empty).Split(' ');
+
+    var action = input[0];
+    var arguments = input[1..];
+
+    status = await (actions!
+        .Where(x => x.IsCommand(input[0]))
+        .FirstOrDefault() ?? Default.Singleton)
+        .Run(arguments, _spotliteContext);
+
+}
