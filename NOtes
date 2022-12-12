@@ -219,6 +219,7 @@ namespace SpotClient
                 .Select(x => x.Flags.Select(f => (f,x.x)))
                 .SelectMany(x => x)
                 .ToDictionary(x => x.f,x => x.x);
+
         public static PropertyInfo? GetProperty(this BaseAction action, string name) =>
             action.GetType()
                 .GetProperties()
@@ -230,6 +231,7 @@ namespace SpotClient
                 Value = x.Clean(),
                 Type = x.StartsWith("-") ? TokenType.Flag : TokenType.Value,
             });
+
         public static string Clean(this string s)
         {
             if(s.StartsWith('"') && s.EndsWith('"'))
