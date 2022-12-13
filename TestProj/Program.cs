@@ -6,7 +6,7 @@ Command foo = new FooDifferent();
 
 Runner.GetCommands();
 
-await foo.Run(args);
+await foo.Invoke();
 
 Console.WriteLine("Hello, World!");
 

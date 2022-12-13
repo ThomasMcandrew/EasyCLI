@@ -22,7 +22,13 @@ public class HelpAttribute : System.Attribute
 public abstract class FlagAttribute : System.Attribute 
 {
     public string[] Flags { get; }
-    public FlagAttribute(params string[] flags) { Flags = flags; }
+    public FlagAttribute(params string[] flags) 
+    { 
+        //make this based on all pre made flags
+        if (flags.Contains("-h"))
+            throw new InvalidDataException("-h is a pre-used flag");
+        Flags = flags; 
+    }
 }
 
 public class ManditoryAttribute : FlagAttribute
