@@ -4,6 +4,10 @@ namespace EasyCLI;
 
 internal static class ArgParser
 {
+    public static object ParseByType(this Type type,string value)
+    {
+        return "";
+    }
     public static bool parse(this IEnumerable<string> args, Command command)
     {
         var properties = command.GetProperties();
@@ -48,36 +52,6 @@ internal static class ArgParser
                 case "System.Decimal":
                     prop.SetValue(command,decimal.Parse(tokens[i].Value ?? ""));
                     break;
-                case "System.Collections.Generic.List`1[System.Object]":
-                    var list = new List<Object>();
-                    while(!tokens[i+1].IsFlag)
-                    {
-                        list.Add(tokens[i].Value!);
-                        i++;
-                    }
-                    list.Add(tokens[i].Value!);
-                    prop.SetValue(command,list);
-                    break;
-                case "System.Collections.Generic.IEnumerable`1[System.Object]":
-                    var list2 = new List<Object>();
-                    while(!tokens[i+1].IsFlag)
-                    {
-                        list2.Add(tokens[i].Value!);
-                        i++;
-                    }
-                    list2.Add(tokens[i].Value!);
-                    prop.SetValue(command,list2.AsEnumerable());
-                    break;
-                case "System.Object[]":
-                    var list3 = new List<Object>();
-                    while(!tokens[i+1].IsFlag)
-                    {
-                        list3.Add(tokens[i].Value!);
-                        i++;
-                    }
-                    list3.Add(tokens[i].Value!);
-                    prop.SetValue(command,list3.ToArray());
-                    break;
                 case "System.DateTime":
                     prop.SetValue(command,DateTime.Parse(tokens[i].Value ?? ""));
                     break;
@@ -85,6 +59,49 @@ internal static class ArgParser
                     prop.SetValue(command,true);
                     i--;
                     break;
+                default:
+                    var enumerableType = prop.PropertyType.GetGenericArguments()[0];
+                    Type genericListType = typeof(List<>).MakeGenericType(enumerableType);
+                    var list = (System.Collections.IList)Activator.CreateInstance(genericListType)!;
+                    while(!tokens[i+1].IsFlag)
+                    {
+                        list.Add(enumerableType.ParseByType(tokens[i].Value!));
+                        i++;
+                    }
+                    list.Add(tokens[i].Value!);
+                    if (prop.PropertyType.IsAssignableTo(typeof(List<>)))
+                        prop.SetValue(command, list);
+                    break;
+                // case "System.Collections.Generic.List`1[System.Object]":
+                    // var list = new List<Object>();
+                    // while(!tokens[i+1].IsFlag)
+                    // {
+                        // list.Add(tokens[i].Value!);
+                        // i++;
+                    // }
+                    // list.Add(tokens[i].Value!);
+                    // prop.SetValue(command,list);
+                    // break;
+                // case "System.Collections.Generic.IEnumerable`1[System.Object]":
+                    // var list2 = new List<Object>();
+                    // while(!tokens[i+1].IsFlag)
+                    // {
+                        // list2.Add(tokens[i].Value!);
+                        // i++;
+                    // }
+                    // list2.Add(tokens[i].Value!);
+                    // prop.SetValue(command,list2.AsEnumerable());
+                    // break;
+                // case "System.Object[]":
+                    // var list3 = new List<Object>();
+                    // while(!tokens[i+1].IsFlag)
+                    // {
+                        // list3.Add(tokens[i].Value!);
+                        // i++;
+                    // }
+                    // list3.Add(tokens[i].Value!);
+                    // prop.SetValue(command,list3.ToArray());
+                    // break;
             }
             i++;
         }
@@ -114,6 +131,10 @@ internal static class ArgParser
 
     /*
         This eventually needs to account for spaces that are contained in quotes
+
+        This may be done via the args from the command line
+        Same with clean, that may be able to be removed
+        // TODO
     */
     public static IEnumerable<Token> Tokenize(this IEnumerable<string> args) => args
         .Select(x => 

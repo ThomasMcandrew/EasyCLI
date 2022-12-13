@@ -1,5 +1,11 @@
 namespace EasyCLI;
 
+public class CommandName : System.Attribute
+{
+    public string Name { get; set; }
+    public CommandName(string name) => Name = name; 
+}
+
 public abstract class FlagAttribute : System.Attribute 
 {
     public string[] Flags { get; }
