@@ -19,6 +19,9 @@ internal static class ArgParser
         if (type.IsAssignableTo(typeof(T[])))
             return collection.ToArray();
         return collection.AsEnumerable();
+
+        //Do this instead
+        var type.GetConstructor().Invoke(collection);
     }
     /*
      * TODO Add ability for hash maps and dicts
