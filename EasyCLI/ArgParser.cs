@@ -53,6 +53,12 @@ internal static class ArgParser
             else if(prop.PropertyType.Namespace!.Contains(nameof(System.Collections)))
             {
                 /*
+                Looking for other enumerables in docs
+                https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic?view=net-7.0
+                for example Stack
+                https://learn.microsoft.com/en-us/dotnet/api/system.collections.generic.stack-1?view=net-7.0
+                can be initialized by an IEnumerable and I think that may be the route for each
+
                 if generic arguments length is 1 then its a list or array
                 if its 2 then it can be a dict or map or whatever, thats 
                 how we can include those in this.
