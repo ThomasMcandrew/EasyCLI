@@ -19,8 +19,15 @@ internal static class ArgParser
         if (type.IsAssignableTo(typeof(T[])))
             return collection.ToArray();
         return collection.AsEnumerable();
+        //for dictionaries if we store them as key value pairs then 
+        //we can make a dictionary in the same way
+        //Would be cool to have a mapping function as an attribute
+        //ie [mapping(x => x.split(','))]
+        //ie [mapping((x,y) => [x,y])]
 
-        //Do this instead
+
+//Would be cool to have a mapping function as an attribute
+//ie []        //Do this instead
         var type.GetConstructor().Invoke(collection);
     }
     /*
