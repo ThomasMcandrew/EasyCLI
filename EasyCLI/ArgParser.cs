@@ -20,10 +20,14 @@ internal static class ArgParser
             return collection.ToArray();
         return collection.AsEnumerable();
     }
+    /*
+     * TODO Add ability for hash maps and dicts
+     */
     public static bool parse(this IEnumerable<string> args, Command command)
     {
         var properties = command.GetProperties();
-        var tokens = args.Tokenize().ToArray();
+        var setStatus = properties.Select(x => x.Value).Distinct().ToDictionary(x => x.GetAttributeGuid() ,x => false);
+        var tokens = args.Tokenize(command).ToArray();
         var i = 0;
         while(i < tokens.Count())
         {
@@ -33,6 +37,7 @@ internal static class ArgParser
                 return false;
             }
             var prop = properties[tokens[i].Value ?? string.Empty];
+            setStatus[prop.GetAttributeGuid()] = true;
 
             i++;
 
@@ -64,13 +69,20 @@ internal static class ArgParser
             }
             i++;
         }
-        /*
-            run a check that 
-            * all mandatory have a value or list none
-            * at least one either or list none 
-        */
+        if (setStatus.Any(x => !x.Value))
+        {
+            Console.WriteLine("Fields not correctly filled in");
+            return false;
+        }
         return true;
     }
+    public static Guid GetAttributeGuid(this PropertyInfo property) =>
+        property.GetCustomAttributes()
+            .Where(x => x.GetType().IsAssignableTo(typeof(FlagAttribute)))
+            .Select(x => (FlagAttribute) x)
+            .FirstOrDefault()?
+            .Id ?? Guid.Empty;
+
     public static Dictionary<string,PropertyInfo> GetProperties(this Command command)  =>
         command.GetType()
             .GetProperties()
@@ -87,6 +99,23 @@ internal static class ArgParser
             .SelectMany(x => x)
             .ToDictionary(x => x.f,x => x.x);
 
+    private static List<string>? __Flags;
+    private static List<string> Flags(Command command) {
+        if (__Flags == null)
+            __Flags = command
+                .GetType()
+                .GetProperties()
+                .Select(p => p
+                    .GetCustomAttributes()
+                    .Where(x => x.GetType().IsAssignableTo(typeof(FlagAttribute)))
+                    .Select(x => (FlagAttribute) x)
+                    .Select(x => x.Flags)
+                    .SelectMany(x => x)
+                    .ToList())
+                .SelectMany(x => x)
+                .ToList();
+        return __Flags;
+    }
 
     /*
         This eventually needs to account for spaces that are contained in quotes
@@ -95,14 +124,14 @@ internal static class ArgParser
         Same with clean, that may be able to be removed
         //TODO
     */
-    public static IEnumerable<Token> Tokenize(this IEnumerable<string> args) => args
+    public static IEnumerable<Token> Tokenize(this IEnumerable<string> args,Command command) => args
         .Select(x => 
             new Token {
                 Value = x.Clean(),
                 //I would like to update this to use values passed as flags 
                 //so that they can start with anything
                 //TODO
-                Type = x.StartsWith("-") ? TokenType.Flag : TokenType.Value,
+                Type = Flags(command).Contains(x) ? TokenType.Flag : TokenType.Value,
             });
 
     public static string Clean(this string s)
