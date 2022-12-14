@@ -52,6 +52,11 @@ internal static class ArgParser
                 prop.SetValue(command,tokens[i].Value);
             else if(prop.PropertyType.Namespace!.Contains(nameof(System.Collections)))
             {
+                /*
+                if generic arguments length is 1 then its a list or array
+                if its 2 then it can be a dict or map or whatever, thats 
+                how we can include those in this.
+                */
                 var enumerableType = prop.PropertyType.GetGenericArguments()[0];
                 Type genericListType = typeof(List<>).MakeGenericType(enumerableType);
                 var list = (System.Collections.IList)Activator.CreateInstance(genericListType)!;
