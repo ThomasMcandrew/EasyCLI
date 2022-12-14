@@ -133,9 +133,6 @@ internal static class ArgParser
         .Select(x => 
             new Token {
                 Value = x.Clean(),
-                //I would like to update this to use values passed as flags 
-                //so that they can start with anything
-                //TODO
                 Type = Flags(command).Contains(x) ? TokenType.Flag : TokenType.Value,
             });
 
