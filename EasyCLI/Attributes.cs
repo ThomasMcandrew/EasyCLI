@@ -19,11 +19,25 @@ public class HelpAttribute : System.Attribute
             .Aggregate((x,y) => $"{x}\n{y}");
 	}
 }
-public abstract class FlagAttribute : System.Attribute 
+public interface Identifiable
+{
+    public string GetIdentity();
+}
+public class IndexedAttribute : System.Attribute , Identifiable
+{
+    public int Index { get; set; }
+    public IndexedAttribute(int i)
+    {
+        Index = i;
+    }
+    public string GetIdentity() => $"{nameof(IndexedAttribute)}{Index}{(char)8}";
+}
+public abstract class FlagAttribute : System.Attribute , Identifiable
 {
     public string[] Flags { get; }
-    public Guid Id { get; }
-    public FlagAttribute(Guid id, params string[] flags) 
+    public string Id { get; }
+    public string GetIdentity() => Id;
+    public FlagAttribute(string id, params string[] flags) 
     { 
         Id = id;
         //make this based on all pre made flags
@@ -35,16 +49,16 @@ public abstract class FlagAttribute : System.Attribute
 
 public class ManditoryAttribute : FlagAttribute
 { 
-    public ManditoryAttribute(params string[] flags) : base(Guid.NewGuid(), flags) {}
+    public ManditoryAttribute(params string[] flags) : base(flags.Aggregate((x,y) => x+y), flags) {}
 }
 
 public class EitherAttribute : FlagAttribute
 { 
-    private static Guid __BaseId { get; set; }
-    private static Guid BaseId {
+    private static string? __BaseId { get; set; }
+    private static string BaseId {
         get {
-            if (__BaseId == Guid.Empty)
-                __BaseId = Guid.NewGuid();
+            if (__BaseId == null)
+                __BaseId = $"BASE_STRING::{ (char) 8} { (char) 4}";
             return __BaseId;
         }
     }
@@ -56,9 +70,9 @@ public class EitherAttribute : FlagAttribute
     //mandatory could be like a guid for each creation
     //and not required could just be an empty string.
     //With this tho error messages wouldnt be able to be as percise so..
-    public EitherAttribute(Guid id, params string[] flags) : base(id, flags) {}
+    public EitherAttribute(int id, params string[] flags) : base($"{id}", flags) {}
 }
 public class NotRequiredAttribute : FlagAttribute
 { 
-    public NotRequiredAttribute(params string[] flags) : base(Guid.Empty, flags) {}
+    public NotRequiredAttribute(params string[] flags) : base(string.Empty, flags) {}
 }

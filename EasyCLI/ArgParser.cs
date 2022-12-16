@@ -12,41 +12,48 @@ internal static class ArgParser
     public static object ParseByType(this Type type,string value) =>
         TypeConverter[type](value);
 
-    public static IEnumerable<T> ToListType<T>(IEnumerable<T> collection, Type type)
-    {
-        if (type.IsAssignableTo(typeof(List<T>)))
-            return collection.ToList();
-        if (type.IsAssignableTo(typeof(T[])))
-            return collection.ToArray();
-        return collection.AsEnumerable();
+    public static IEnumerable<T> ToListType<T>(IEnumerable<T> collection, Type type) => 
+        (IEnumerable<T>) type.GetConstructor(new[] { collection.GetType() })!
+            .Invoke(new[] { collection ?? Enumerable.Empty<T>() });
         //for dictionaries if we store them as key value pairs then 
         //we can make a dictionary in the same way
         //Would be cool to have a mapping function as an attribute
         //ie [mapping(x => x.split(','))]
         //ie [mapping((x,y) => [x,y])]
-
-
-//Would be cool to have a mapping function as an attribute
-//ie []        //Do this instead
-        var type.GetConstructor().Invoke(collection);
-    }
     /*
      * TODO Add ability for hash maps and dicts
      */
     public static bool parse(this IEnumerable<string> args, Command command)
     {
-        var properties = command.GetProperties();
-        var setStatus = properties.Select(x => x.Value).Distinct().ToDictionary(x => x.GetAttributeGuid() ,x => false);
+        var flagProperties = command.GetFlagProperties();
+        var indexProperties = command.GetIndexProperties();
+        
+        var attributeIdentities = flagProperties
+            .Select(x => x.Value.GetAttributeGuid())
+            .ToList();
+        attributeIdentities.AddRange(
+            indexProperties.Select(x => x.GetAttributeGuid())
+        );
+        var setStatus = attributeIdentities
+            .Distinct()
+            .ToDictionary(x => x, x => false);
+
         var tokens = args.Tokenize(command).ToArray();
         var i = 0;
         while(i < tokens.Count())
         {
-            if(!(tokens[i].IsFlag && properties.ContainsKey(tokens[i].Value ?? string.Empty)))
+            PropertyInfo prop;
+            if(flagProperties.ContainsKey(tokens[i].Value ?? string.Empty))
+                prop = flagProperties[tokens[i].Value ?? string.Empty];
+            else if(indexProperties.Any())
+                prop = indexProperties.Pop();
+            else 
             {
                 Console.WriteLine($"Unrecognized token {tokens[i].Value}");
                 return false;
             }
-            var prop = properties[tokens[i].Value ?? string.Empty];
+            
+            prop = flagProperties[tokens[i].Value ?? string.Empty];
             setStatus[prop.GetAttributeGuid()] = true;
 
             i++;
@@ -97,26 +104,23 @@ internal static class ArgParser
         }
         return true;
     }
-    public static Guid GetAttributeGuid(this PropertyInfo property) =>
-        property.GetCustomAttributes()
-            .Where(x => x.GetType().IsAssignableTo(typeof(FlagAttribute)))
-            .Select(x => (FlagAttribute) x)
+    public static string GetAttributeGuid(this PropertyInfo property) =>
+        property.GetCustomAttributes(typeof(Identifiable),false)
+            .Select(x => (Identifiable) x)
             .FirstOrDefault()?
-            .Id ?? Guid.Empty;
-
-    public static Dictionary<string,PropertyInfo> GetProperties(this Command command)  =>
+            .GetIdentity() ?? string.Empty;
+    public static Stack<PropertyInfo> GetIndexProperties(this Command command) => new Stack<PropertyInfo>(
         command.GetType()
             .GetProperties()
-            .Where(x => x.GetCustomAttributes(false)
-                .Where(y => y.GetType().IsAssignableTo(typeof(FlagAttribute)))
-                .Any()
-            )
-            .Select(x => (
-                ((FlagAttribute) x.GetCustomAttributes(false)
-                    .Where(y => y.GetType().IsAssignableTo(typeof(FlagAttribute)))
-                .FirstOrDefault()!)
-                .Flags, x))
-            .Select(x => x.Flags.Select(f => (f,x.x)))
+            .Where(x => x.GetCustomAttributes(typeof(IndexedAttribute)).Any())
+            .OrderBy(x => ((IndexedAttribute) (x.GetCustomAttributes(typeof(IndexedAttribute)).First())).Index)
+    );
+    public static Dictionary<string,PropertyInfo> GetFlagProperties(this Command command)  =>
+        command.GetType()
+            .GetProperties()
+            .Select(x => ((FlagAttribute[]) x.GetCustomAttributes(typeof(FlagAttribute),false),x))
+            .Select(x => x.Item1.Select(a => a.Flags.Select(f => (f, x.x))))
+            .SelectMany(x => x)
             .SelectMany(x => x)
             .ToDictionary(x => x.f,x => x.x);
 

@@ -15,8 +15,11 @@ public class FooDifferent : Command
 {
     [Manditory("-f","--foo")]
     public string? Fum { get; set; }
-    [Manditory("-t","--gdr")]
+    [Either("-t","--gdr")]
     public List<int>? LOT { get; set; }
+
+    [Indexed(0)]
+    public string? indexed { get; set; }
     protected override Task<int> Run()
     {
         throw new NotImplementedException();
