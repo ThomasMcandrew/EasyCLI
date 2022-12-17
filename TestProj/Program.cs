@@ -11,7 +11,7 @@ return await new CliApp()
 [CommandName("Rename")]
 public class FooDifferent : Command
 {
-    [Manditory("-f","--foo")]
+    [Required("-f","--foo")]
     public string? Fum { get; set; }
     [NotRequired("-t","--gdr")]
     public List<int>? LOT { get; set; }
@@ -27,7 +27,7 @@ public class FooDifferent : Command
 }
 public class Foo : Command
 {
-    [Manditory("-f","--foo")]
+    [Required("-f","--foo")]
     public string? Fum { get; set; }
     protected override async Task<int> Run()
     {
