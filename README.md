@@ -3,7 +3,9 @@ EasyCLI is a project intended to make creating CLI tools easier.
 
 ## Getting Started
 Basic setup is quite simple.
-
+```
+dotnet add package TM.EasyCLI --version 0.1.0
+```
 In the program.cs file put the following code.
 ```cs 
 using EasyCLI;

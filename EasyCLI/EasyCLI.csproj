@@ -4,6 +4,13 @@
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Version>0.1.0</Version>
+    <PackageId>TM.EasyCLI</PackageId>
+    <Authors>Thomas McAndrew</Authors>
+    <PackageProjectUrl>https://github.com/ThomasMcandrew/EasyCLI</PackageProjectUrl>
+    <Description>
+      This library helps simplify the process of creating command line tools 
+    </Description>
   </PropertyGroup>
 
 </Project>
