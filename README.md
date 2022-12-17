@@ -1,6 +1,9 @@
 # EasyCLI
 EasyCLI is a project intended to make creating CLI tools easier.
 
+#### warning
+This Project is in very early stages and has not been tested extensively,
+
 ## Getting Started
 Basic setup is quite simple.
 ```
