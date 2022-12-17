@@ -13,7 +13,7 @@ public class FooDifferent : Command
 {
     [Manditory("-f","--foo")]
     public string? Fum { get; set; }
-    [Either("-t","--gdr")]
+    [NotRequired("-t","--gdr")]
     public List<int>? LOT { get; set; }
     [Inject]
     public string? toInject { get; set; }

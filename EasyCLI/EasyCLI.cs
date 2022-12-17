@@ -22,26 +22,15 @@ public static class CliAppExtensions
         var cliArgs = Environment.GetCommandLineArgs();
         if (cliArgs.Length < 2)
             throw new InvalidOperationException("No Command Provided");
-        var commands = self.GetCommands();
-        var commandName = cliArgs[1];
+        var commands = Assembly.GetAssembly(typeof(CliApp))!.GetCommands();
+        var userCommands = Assembly.GetEntryAssembly()!.GetCommands();
+        foreach(var uc in userCommands) 
+            if(!commands.TryAdd(uc.Key,uc.Value))
+                throw new Exception("Invalid Command Name");
+
+        var commandName = cliArgs[1].ToLower();
         var command = (Command) commands[commandName].GetConstructor(new Type[]{})!.Invoke(null);
         return await command.Invoke(self);
     }
-    private static Dictionary<string, Type> GetCommands(this CliApp self) => 
-        Assembly.GetEntryAssembly()!
-            .GetTypes()
-            .Where(x => x.IsAssignableTo(typeof(Command)))
-            .ToDictionary(x => 
-                x.GetCustomAttributes()
-                    .Where(a => a.GetType() == typeof(CommandName))
-                    .Any() ? 
-                x.GetCustomAttributes()
-                    .Where(a => a.GetType() == typeof(CommandName))
-                    .Select(a => (CommandName) a)
-                    .FirstOrDefault()!
-                    .Name :
-                x.Name,
-            x => x);
- 
-
+    
 }

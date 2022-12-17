@@ -36,6 +36,7 @@ internal static class ArgParser
         );
         var setStatus = attributeIdentities
             .Distinct()
+            .Where(x => !String.IsNullOrWhiteSpace(x))
             .ToDictionary(x => x, x => false);
 
         var tokens = args.Tokenize(command).ToArray();
@@ -157,6 +158,22 @@ internal static class ArgParser
                 .ToList();
         return __Flags;
     }
+    public static Dictionary<string, Type> GetCommands(this Assembly assembly) => 
+        assembly
+            .GetTypes()
+            .Where(x => x.IsAssignableTo(typeof(Command)))
+            .ToDictionary(x => 
+                x.GetCustomAttributes()
+                    .Where(a => a.GetType() == typeof(CommandName))
+                    .Any() ? 
+                x.GetCustomAttributes()
+                    .Where(a => a.GetType() == typeof(CommandName))
+                    .Select(a => (CommandName) a)
+                    .FirstOrDefault()!
+                    .Name.ToLower() :
+                x.Name.ToLower(),
+            x => x);
+ 
 
     public static IEnumerable<Token> Tokenize(this IEnumerable<string> args,Command command) => args
         .Select(x => 
