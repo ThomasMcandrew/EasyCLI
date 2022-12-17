@@ -105,7 +105,7 @@ public class Example : Command
 ./a updatedName -f 3.23 -l 23 43 53 23 -b -a str "string example" 
 ```
 **Note 
-Enumerable arguments will continue to accept the arguments until the end or until another 
+IEnumerable<> arguments will continue to accept the arguments until the end or until another 
 flag is reached
 Boolean flags to not accept an input rather they are false if not inputed and true if inputed.
 
