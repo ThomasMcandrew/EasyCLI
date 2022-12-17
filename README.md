@@ -97,6 +97,8 @@ public class Example : Command
         return 0;
     }
 }
+```
+
 ```bash
 ./a updatedName -f 3.23 -l 23 43 53 23 -b -a str "string example" 
 ```
@@ -121,6 +123,8 @@ public class Example : Command
         return 0;
     }
 }
+```
+
 ```bash
 ./a updatedName 34.12 645.345
 ```
@@ -148,6 +152,8 @@ public class Example : Command
         return 0;
     }
 }
+```
+
 ```bash
 ./a updatedName -b 34.12 -s "Input String" 645.345
 ```
