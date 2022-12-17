@@ -2,9 +2,11 @@ namespace EasyCLI;
 
 public abstract class Command
 {
-    public async Task<int> Invoke()
+    public async Task<int> Invoke(CliApp cli)
     {
-        var args = Environment.GetCommandLineArgs()[1..];
+        if(!this.SetInjectors(cli))
+            return -1;
+        var args = Environment.GetCommandLineArgs()[2..];
         if (!args.parse(this))
             return -1;
 

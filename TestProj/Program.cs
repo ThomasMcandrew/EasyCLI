@@ -1,14 +1,12 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using EasyCLI;
 
-Console.WriteLine("Hello, World!");
-Command foo = new FooDifferent();
+return await new CliApp()
+    .ConfigureInjector<string>(() => "Example")
+    .Run();
 
-Runner.GetCommands();
 
-await foo.Invoke();
 
-Console.WriteLine("Hello, World!");
 
 [CommandName("Rename")]
 public class FooDifferent : Command
@@ -17,20 +15,22 @@ public class FooDifferent : Command
     public string? Fum { get; set; }
     [Either("-t","--gdr")]
     public List<int>? LOT { get; set; }
-
+    [Inject]
+    public string? toInject { get; set; }
     [Indexed(0)]
     public string? indexed { get; set; }
-    protected override Task<int> Run()
+    protected override async Task<int> Run()
     {
-        throw new NotImplementedException();
+        Console.WriteLine($"{Fum} {LOT!.Select(x => $"{x}").Aggregate((x,y) => $"{x}{y}")}{toInject}{indexed}");
+        return 0;
     }
 }
 public class Foo : Command
 {
     [Manditory("-f","--foo")]
     public string? Fum { get; set; }
-    protected override Task<int> Run()
+    protected override async Task<int> Run()
     {
-        throw new NotImplementedException();
+        return 0;
     }
 }

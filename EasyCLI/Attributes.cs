@@ -6,6 +6,8 @@ public class CommandName : System.Attribute
     public CommandName(string name) => Name = name; 
 }
 
+public class InjectAttribute : System.Attribute { }
+
 public class HelpAttribute : System.Attribute 
 {
 	public string? Value { get; }

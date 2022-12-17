@@ -42,9 +42,13 @@ internal static class ArgParser
         var i = 0;
         while(i < tokens.Count())
         {
+            var token = tokens[i];
             PropertyInfo prop;
             if(flagProperties.ContainsKey(tokens[i].Value ?? string.Empty))
+            {
                 prop = flagProperties[tokens[i].Value ?? string.Empty];
+                i++;
+            }
             else if(indexProperties.Any())
                 prop = indexProperties.Pop();
             else 
@@ -53,10 +57,7 @@ internal static class ArgParser
                 return false;
             }
             
-            prop = flagProperties[tokens[i].Value ?? string.Empty];
             setStatus[prop.GetAttributeGuid()] = true;
-
-            i++;
 
             if(prop.PropertyType == typeof(bool))
             {
@@ -104,6 +105,21 @@ internal static class ArgParser
         }
         return true;
     }
+    public static bool SetInjectors(this Command command, CliApp app)
+    {
+        var properties = command.GetInjectedProperties();
+        foreach (var prop in properties)
+            try {
+                prop.SetValue(command,app.InjectorGenerators![prop.PropertyType]()); }
+            catch(Exception){
+                throw new NotImplementedException($"No Generator for {prop.PropertyType.Name}"); }
+        return true;
+    }
+    public static List<PropertyInfo> GetInjectedProperties(this Command command) =>
+        command.GetType()
+            .GetProperties()
+            .Where(x => x.GetCustomAttributes(typeof(InjectAttribute)).Any())
+            .ToList();
     public static string GetAttributeGuid(this PropertyInfo property) =>
         property.GetCustomAttributes(typeof(Identifiable),false)
             .Select(x => (Identifiable) x)
@@ -142,24 +158,10 @@ internal static class ArgParser
         return __Flags;
     }
 
-    /*
-        This eventually needs to account for spaces that are contained in quotes
-
-        This may be done via the args from the command line
-        Same with clean, that may be able to be removed
-        //TODO
-    */
     public static IEnumerable<Token> Tokenize(this IEnumerable<string> args,Command command) => args
         .Select(x => 
             new Token {
-                Value = x.Clean(),
+                Value = x,
                 Type = Flags(command).Contains(x) ? TokenType.Flag : TokenType.Value,
             });
-
-    public static string Clean(this string s)
-    {
-        if(s.StartsWith('"') && s.EndsWith('"'))
-            return s[1..(s.Length-1)];
-        return s;
-    }
 }
