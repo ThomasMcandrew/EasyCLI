@@ -27,6 +27,7 @@ public class Example : Command
 ```
 
 To Run this command in the terminal
+** NOTE All examples of the command running are after building, "a" being the compiled executable
 ```cmd
 a.exe example
 ```
